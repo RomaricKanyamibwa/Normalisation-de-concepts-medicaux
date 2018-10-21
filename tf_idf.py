@@ -29,11 +29,10 @@ with open('data.csv', 'w') as file_output:
                 corpus = result[i][1]
                 vectorizer = TfidfVectorizer()
                 matrix = vectorizer.fit_transform(corpus)
-           # print("------- {} -------".format(i))
-            #print(matrix)
-                idf=vectorizer._tfidf.idf_
-                p = zip(vectorizer.get_feature_names(), idf)
-                p.sort(key = lambda t: t[1])
-                for x in p:
+                feature_names = vectorizer.get_feature_names()
+                doc = 0
+                feature_index = matrix[doc,:].nonzero()[1]
+                tfidf_scores = zip(feature_index, [matrix[doc, x] for x in feature_index])
+                for w, s in [(feature_names[i], s) for (i, s) in tfidf_scores]:
                     t.write("------- {} -------".format(result[i][0]))
-                    print>>t, x
+                    print >> t, (w, s)
