@@ -2,7 +2,7 @@ import csv
 import numpy as np
 from collections import Counter
 import itertools
-
+from functools import reduce 
 from porter2stemmer import Porter2Stemmer
 
 
@@ -25,14 +25,21 @@ with open('data.csv', 'w') as file_output:
         #itertools.groupby needs data to be sorted first
         data = sorted(data, key=extract_key)
         result = [[[k],[x[1] for x in g]] for k, g in itertools.groupby(data, extract_key)]
-        with open("steam.txt","w") as t:
+        with open("stem.txt","w") as t:
             res = []
-            for i in range(0,len(result)):
+            for i in range(0,30):
                 corpus = result[i][1]
                 for j in range(0,len(corpus)):
                     res.append(corpus[j])
             stemmer = Porter2Stemmer()
             reslt = [c for c in res]
             reslt = [[stemmer.stem(word) for word in sentence.split(" ")] for sentence in res]
-            print >> t,reslt
-            print(reslt)
+            flat_list = [item for sublist in reslt for item in sublist]
+            listLines = []
+            for index in flat_list:
+                if index in listLines:
+                    pass
+                else:
+                    listLines.append(index)
+            print(listLines)
+            print >> t,listLines
