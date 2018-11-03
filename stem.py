@@ -27,7 +27,7 @@ with open('data.csv', 'w') as file_output:
         result = [[[k],[x[1] for x in g]] for k, g in itertools.groupby(data, extract_key)]
         with open("stem.txt","w") as t:
             res = []
-            for i in range(0,30):
+            for i in range(0,len(result)):
                 corpus = result[i][1]
                 for j in range(0,len(corpus)):
                     res.append(corpus[j])
