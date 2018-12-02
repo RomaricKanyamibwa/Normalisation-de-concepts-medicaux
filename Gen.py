@@ -2,6 +2,7 @@ from gensim.models import Word2Vec
 import re
 from random import randint
 import time
+from sklearn.neighbors import NearestNeighbors
 def to_list(text):
 	return re.sub("[^\w]", " ", text).split()
 
@@ -29,19 +30,19 @@ for theme in ListeTheme:
 """
 df.dropna()
 
-newlist=tfidf.transform(["superior part of head","teeth hurting"])
+newlist=tfidf.transform(["superior part of head","toothache"])
 
 ptest={k: (g['Origine'],g['Nom'].tolist()) for k,g in df.groupby('Code')}
-ptest2={k: (g['Origine'],g['Nom'].tolist()) for k,g in df_anatomy_first.groupby('Code')}
+ptest2={k: (g['Origine'],g['Nom'].tolist()) for k,g in df_sign_first.groupby('Code')}
 
-text="superior part of head"
+text="toothache"
 prediction=clf.predict(newlist)
 label=prediction[1]
 wordtext=to_list(text)
 maxVal=0
 val=True
 tzrro=time.time()
-
+"""
 for key, value in ptest2.iteritems():
 	for i in value[1]:
 		val=True
@@ -59,9 +60,43 @@ for key, value in ptest2.iteritems():
 							maxVal=newvall
 							realkey=key
 print (time.time()-tzrro)
+"""
 
+dicoIndiceKey={}
+compteur=0
+ExpressionList=[]
+for key, value in ptest.iteritems():
+	for i in value[1]:
+		val=True
+		if type(i) is str:
+			wordList1=to_list(i)
+			if (not wordList1)==False:
+				listeVector=[]
+				for k in wordList1:
+					if(k in model.wv.vocab)==False:
+						val=False
+					else:
+						listeVector.append(model.wv[k])
 
+				if val==True:
+						VectorMean=sum(listeVector)/len(listeVector)
+						ExpressionList.append(VectorMean)
+						dicoIndiceKey[compteur]=key
+						compteur=compteur+1
 
+neigh=NearestNeighbors(3)
+
+neigh.fit(ExpressionList)
+
+ExpressionTest=[]
+ExpressionTest.append(model.wv["superior"])
+ExpressionTest.append(model.wv["part"])
+ExpressionTest.append(model.wv["of"])
+ExpressionTest.append(model.wv["head"])
+VectorTest=sum(ExpressionTest)/len(ExpressionTest)
+prediction=neigh.kneighbors([model.wv["toothache"],VectorTest],return_distance=False)
+print (ptest[dicoIndiceKey[prediction[0][0]]])
+print (ptest[dicoIndiceKey[prediction[1][0]]])
 
 """
 OKay J'ai mes expressions
@@ -69,5 +104,8 @@ Je calcule les tfidf
 je predis le concept
 Le concept en main je recupere les mots les plus proches
 
+
+librarie qui fait le plus proche voisin au lieu de le calculer en dure, ca le fout dans l'espace -> 
+faire des super tests d'evaluations /data visualisation tizni/tisni/tease ni 
 Comme c 'est de l'abalyse contextuel chercher la simalarite c "est de la merde
 """
