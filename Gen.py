@@ -3,6 +3,8 @@ import re
 from random import randint
 import time
 from sklearn.neighbors import NearestNeighbors
+from sklearn.model_selection import train_test_split
+
 def to_list(text):
 	return re.sub("[^\w]", " ", text).split()
 
@@ -65,6 +67,7 @@ print (time.time()-tzrro)
 dicoIndiceKey={}
 compteur=0
 ExpressionList=[]
+KeyList=[]
 for key, value in ptest.iteritems():
 	for i in value[1]:
 		val=True
@@ -82,12 +85,12 @@ for key, value in ptest.iteritems():
 						VectorMean=sum(listeVector)/len(listeVector)
 						ExpressionList.append(VectorMean)
 						dicoIndiceKey[compteur]=key
+						KeyList.append(key)
 						compteur=compteur+1
 
-neigh=NearestNeighbors(3)
-
-neigh.fit(ExpressionList)
-
+neigh=NearestNeighbors(1)
+X_train,X_test,Y_train,y_test=train_test_split(ExpressionList,KeyList,test_size=0.05, random_state=42)
+neigh.fit(X_train)
 ExpressionTest=[]
 ExpressionTest.append(model.wv["superior"])
 ExpressionTest.append(model.wv["part"])
