@@ -1,104 +1,63 @@
-from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import Perceptron, LogisticRegression, SGDClassifier
-from sklearn.naive_bayes import BernoulliNB, MultinomialNB
-from sklearn.ensemble import RandomForestClassifier
+import csv
+import json
+import numpy as np
+from collections import Counter
+import itertools
+from sklearn.feature_extraction.text import TfidfVectorizer
 import pandas as pd
-from sklearn.metrics import classification_report,confusion_matrix
-import numpy as np 
-from random import randint
-import time
-import sklearn
-
-sLength=27751
-NbClasse=5
-#neeed ceux la aussi hoho
-df_anatomy=pd.read_csv('~/ProjetMEdical/Anatomy.csv',names=["Code","Nom","Categorie"],sep="\t") 
-df_Chemical=pd.read_csv('~/ProjetMEdical/Chemicals_and_drugs.csv',names=["Code","Nom","Categorie"],sep="\t") 
-df_Devices=pd.read_csv('~/ProjetMEdical/Devices.csv',names=["Code","Nom","Categorie"],sep="\t") 
-df_sign=pd.read_csv('~/ProjetMEdical/Sign_or_Symptom.csv',names=["Code","Nom","Categorie"],sep="\t") 
-df_Concept=pd.read_csv('~/ProjetMEdical/Concept_and_Ideas.csv',names=["Code","Nom","Categorie"],sep="\t") 
-df_anatomy_first=df_anatomy[sLength:2*sLength]
-df_sign_first=df_sign[0:sLength]
-df_Chemical_first=df_Chemical[2*sLength:3*sLength]
-df_Devices_first=df_Devices[2*sLength:3*sLength]
-df_Concept_first=df_Concept[3*sLength:4*sLength]
-
-df_anatomy_first['Origine']=pd.Series(np.ones(sLength,dtype=int)*0,index=df_anatomy_first.index)
-df_Chemical_first['Origine']=pd.Series(np.ones(sLength,dtype=int)*1,index=df_Chemical_first.index)
-df_Devices_first['Origine']=pd.Series(np.ones(sLength,dtype=int)*2,index=df_Devices_first.index)
-df_sign_first['Origine']=pd.Series(np.ones(sLength,dtype=int)*3,index=df_sign_first.index)
-df_Concept_first['Origine']=pd.Series(np.ones(sLength,dtype=int)*4,index=df_Concept_first.index)
-df=pd.concat([df_anatomy_first,df_Chemical_first,df_Devices_first,df_sign_first,df_Concept_first],ignore_index=True)
-
-"""
-def ListeVoisin(indicecalcul):
-	for i in range(1,50252):
-	if sklearn.metrics.pairwise.euclidean_distances(features[indicecalcul],features[i])<minimal and indicecalcul!=i:
-		print("I dont wann wake up")
-		minimal=sklearn.metrics.pairwise.euclidean_distances(features[indicecalcul],features[i])
-		indice=i
-"""
-#df=pd.read_csv('classif.csv',names=["Code","Nom","Categorie"],sep=",") 
-#df.Code[79000:]=[0] * (len(df.Code)-23000)
+from functools import reduce 
+import nltk
+nltk.download('punkt')
+from porter2stemmer import Porter2Stemmer
+from nltk.tokenize import sent_tokenize, word_tokenize
+from collections import defaultdict
 
 
-tfidf = TfidfVectorizer()
-df.Origine=df.Origine.astype(int)
-features =tfidf.fit_transform(df.Nom.values.astype(str))
+def extract_key(v):
+    return v[0]
 
-X_train, X_test, y_train, y_test = train_test_split(features,df.Origine,test_size=0.05, random_state=42)
-
-clf=LogisticRegression()
-clf.fit(X_train,y_train)
-
-#clf.sparsify()
-#clf_label_i = LogisticRegression(penalty='l1').fit(X_train, y_train.toarray()).sparsify()
-predictions = clf.predict(X_test)
-"""
-print(confusion_matrix(y_test,predictions))
-liste=[]
-print(classification_report(y_test,predictions))
-indicetrouve=0
-indicecalcul=randint(0,NbClasse*sLength)
-minimal=10
-for i in range(0,NbClasse*sLength):
-		if df.Origine[i]==df.Origine[indicecalcul]:
-			distance=sklearn.metrics.pairwise.euclidean_distances(features[indicecalcul],features[i])
-			if distance<minimal and indicecalcul!=i:
-				minimal=distance
-				indicetrouve=i
-	result=df.Code[indicecalcul]==df.Code[indicetrouve]
-	liste.append(result)
-
-"""
-"""
-Probleme sur le tfidf valeurs trop proches 
-Peut pas comparer mot par mot 
-Stemming
-Calculer distance a la volee et premier filtre 
-Regler tfidf ou changer de methode
-tfidf globale
-embeddings avec des distances 
-de chquae mot
-moyenne pour chaque terme 
-En amont -> classification et combinaison 
-Word 2 vec  permet d'avoir les vecteurs
-
-Probleme des BroadMannArea
-
-Numero 0 -> Devices
-Numero 1 -> Living Beings
-Numero 2 -> Chemicals and Drugs
-Numero 3 ->  Anatomy
-Numero 4 -> Conce
-
-predict output word -> pas mal 
-most similar
-most similar cos 
-from word embeddings to document distances
-
-
-cnn -> essayer d'apprendre que deux dsynonymes sont proches etque deux non synonymes sont loins -> TRIPLET LOSS 
-Regardez seq2seq
-"""
+with open('data.csv', 'w') as file_output:
+    fm = ['Code','Nom']#['Categorie','tf_idf']
+    wr = csv.DictWriter(file_output,delimiter='\t', fieldnames=fm)
+    wr.writeheader()
+    with open('Living_Beings.csv', 'r') as file_input:
+        rd = csv.reader(file_input, delimiter='\t')
+    ## CSV to Array
+        data = []
+        for row in rd: # each row is a list
+            wr.writerow({'Code': row[0],'Nom': row[1]})
+            data.append(row)
+    ## Merge the same elements in an array
+        #itertools.groupby needs data to be sorted first
+        data = sorted(data, key=extract_key)
+        result = [[k,[x[1] for x in g]] for k, g in itertools.groupby(data, extract_key)]
+        with open("dictionary.json","w") as t:
+            reslt = []
+            score = []
+            for i in range(0,22326):
+                corpus = result[i][1]
+                res = []
+                for j in range(0,len(corpus)):
+                    res.append(corpus[j])
+                vectorizer = TfidfVectorizer()
+                matrix = vectorizer.fit_transform(res)
+                feature_names = vectorizer.get_feature_names()
+                stemmer = Porter2Stemmer()
+                reslt.append(list([[result[i][0],stemmer.stem(word)] for word in w.split(' ')] for w in feature_names))
+                score.append([m,])
+            flat_list = [item for res in reslt for sublist in res for item in sublist]
+            res3 = []
+            res4 = []
+            for i in range(0,len(flat_list)):
+                corps1 = flat_list[i][0]
+                corps2 = flat_list[i][1]
+                for j in range(0,len(corps2)):
+                    res4.append(corps2)
+                    res3.append(corps1)
+            d = defaultdict(list)
+            for a, b in zip(res4, res3):
+                if b in d[a]:
+                    pass
+                else:
+                    d[a].append(b)
+            t.write(json.dumps(d)+"\n")
