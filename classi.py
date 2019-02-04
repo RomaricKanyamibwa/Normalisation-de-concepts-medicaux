@@ -57,105 +57,50 @@ test_posts = filetest["Tokens"][train_size:]
 test_label=filetest["label"][train_size:]
 
 
-#Pour CNN
-for i in train_label.index:
-	train_label[i]=lesfichier.index(train_label[i])
-
-
-
 num_labels = 9
 vocab_size = 15000
-max_len=100
+batch_size = 100
 
 tokenizer = Tokenizer(num_words=vocab_size)
 tokenizer.fit_on_texts(train_posts)
 
-#CNN
-cnn_train_sequence = tokenizer.texts_to_sequences(train_posts)
-cnn_train_matrix = sequence.pad_sequences(cnn_train_sequence,maxlen=max_len)
-
-def get_cnn_model_v1():   
-    model = Sequential()
-    # we start off with an efficient embedding layer which maps
-    # our vocab indices into embedding_dims dimensions
-    # 1000 is num_max
-    model.add(Embedding(1000,20,input_length=max_len))
-    model.add(Dropout(0.2))
-    model.add(Conv1D(64,3,padding='valid', activation='relu',strides=1))
-    model.add(GlobalMaxPooling1D())
-    model.add(Dense(256))
-    model.add(Dropout(0.2))
-    model.add(Activation('relu'))
-    model.add(Dense(1))
-    model.add(Activation('sigmoid'))
-    model.summary()
-    model.compile(loss='sparse_categorical_crossentropy',optimizer='adam', metrics=['acc'])
-    return model
-
-def check_model(model,x,y):
-    model.fit(x,y,batch_size=32,epochs=10,verbose=1,validation_split=0.2)
-
-
-
-m = get_cnn_model_v1()
-check_model(m,cnn_train_matrix,train_label)
-
-
-
 #MLP
-"""
-x_train = tokenizer.texts_to_seque(train_posts, mode='tfidf')
+
+x_train = tokenizer.texts_to_matrix(train_posts, mode='tfidf')
 x_test = tokenizer.texts_to_matrix(test_posts, mode='tfidf')
 
 encoder = LabelBinarizer()
 encoder.fit(train_label)
+
 y_train = encoder.transform(train_label)
 y_test = encoder.transform(test_label)
 
-
 model = Sequential()
-model.add(Dense(512, input_shape=(vocab_size,)))
+model.add(Dense(1000, input_shape=(vocab_size,)))
+model.add(Activation('relu'))
+model.add(Dropout(0.5))
+model.add(Dense(500))
+model.add(Activation('relu'))
+model.add(Dropout(0.5))
+model.add(Dense(200))
 model.add(Activation('relu'))
 model.add(Dropout(0.3))
-model.add(Dense(512))
+model.add(Dense(1000))
 model.add(Activation('relu'))
-model.add(Dropout(0.3))
+model.add(Dropout(0.5))
+model.add(Dense(20))
+model.add(Activation('relu'))
+model.add(Dropout(0.5))
 model.add(Dense(num_labels))
 model.add(Activation('softmax'))
-model.summary()def get_cnn_model_v1():   
-    model = Sequential()
-    # we start off with an efficient embedding layer which maps
-    # our vocab indices into embedding_dims dimensions
-    # 1000 is num_max
-    model.add(Embedding(1000,20,input_length=max_len))
-    model.add(Dropout(0.2))
-    model.add(Conv1D(64,3,padding='valid', activation='relu',strides=1))
-    model.add(GlobalMaxPooling1D())
-    model.add(Dense(256))
-    model.add(Dropout(0.2))
-    model.add(Activation('relu'))
-    model.add(Dense(num_labels))
-    model.add(Activation('sigmoid'))
-    model.summary()
-    model.compile(loss='categorical_crossentropy',optimizer='adam', metrics=['acc'])
-    return model
+model.summary()
 
-def check_model(model,x,y):
-    model.fit(x,y,batch_size=32,epochs=10,verbose=1,validation_split=0.2)
-
-
-
-m = get_cnn_model_v1()
-check_model(m,cnn_train_matrix,train_label)
-
-
- 
-model.compile(loss='categorical_crossentropy',optimizer='adam',metrics=['accuracy'])
+model.compile(loss='mean_squared_error',optimizer='adam',metrics=['accuracy'])
 history = model.fit(x_train, y_train,batch_size=batch_size,epochs=5,verbose=1,validation_split=0.1)
-
-
 # list all data in history
-print(history.history.keys())
+
+
+
 # summarize history for accuracy
 plt.plot(history.history['acc'])
 plt.plot(history.history['val_acc'])
@@ -172,20 +117,6 @@ plt.ylabel('loss')
 plt.xlabel('epoch')
 plt.legend(['train', 'test'], loc='upper left')
 plt.show()
-
-
 score, acc = model.evaluate(x_test, y_test,batch_size=batch_size, verbose=1)
  
-print('Test score:', score)
 print('Test accuracy:', acc)
-
- 
-text_labels = encoder.classes_
- 
-for i in range(10):
-    prediction = model.predict(np.array([x_test[i]]))
-    predicted_label = text_labels[np.argmax(prediction[0])]
-    print('Actual label:' + test_label.iloc[i])
-    print("Predicted label: " + predicted_label)
-
-"""
